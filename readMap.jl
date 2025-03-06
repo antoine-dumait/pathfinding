@@ -59,6 +59,8 @@ function fileToMatrixGraph(path::String, sandValue::Int64, waterValue::Int64)::M
                 -1
             elseif c == 'S'
                 sandValue
+            elseif c == 'W'
+                waterValue
             else
                 @error("Unexpected value in map: $c")
                 -1000

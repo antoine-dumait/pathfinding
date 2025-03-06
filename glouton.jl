@@ -6,7 +6,7 @@ using Printf
 using Plots
 
 #fix neighbor method choise, fix implementation to always return a movemment cost, use with other algorithm
-function randomPathAStar(filePath::String, heuristicNumber::Int=1)
+function randomPathGlouton(filePath::String, heuristicNumber::Int=1)
     # heuristicChoice::Function = ()->false #
     # neighborsChoice::Function
     if heuristicNumber == 1
@@ -20,7 +20,7 @@ function randomPathAStar(filePath::String, heuristicNumber::Int=1)
     end
     myCells::Matrix{Int64} = fileToMatrixGraph(filePath, 5, 8)
     height, width = size(myCells)
-    while !algoAstarAux((rand(1:width), rand(1:height)), (rand(1:width), rand(1:height)), myCells)
+    while !algoGloutonAux((rand(1:width), rand(1:height)), (rand(1:width), rand(1:height)), myCells)
     end
 end
 
@@ -38,12 +38,12 @@ function showDistAndPath(distances::Matrix{Int64})
     display(p)
 end
 
-function algoAstar(path::String, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
-    algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, fileToMatrixGraph(path, 5, 8))
+function algoGlouton(path::String, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
+    algoGloutonAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, fileToMatrixGraph(path, 5, 8))
 end
 
-function algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})#add heurisitc choice
-    @printf("--------------------A*------------------------\n")
+function algoGloutonAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})
+    @printf("--------------------Glouton------------------------\n")
     @printf("Getting path from %s to %s\n", start, goal)
     
     if !checkIfPathPossible(start, goal, cells)
@@ -86,7 +86,7 @@ function algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells
                 if new_dist < distance[ny, nx]
                     added_to_queue_count+=1
                     distance[ny, nx] = new_dist
-                    queue[(nx,ny)] = new_dist + heuristicManathan((nx,ny), goal)
+                    queue[(nx,ny)] = heuristicManathan((nx,ny), goal)
                     came_from[(nx, ny)] = (x, y)
                 end
             end

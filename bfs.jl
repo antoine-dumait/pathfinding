@@ -1,17 +1,24 @@
 include("readMap.jl")
 include("utils.jl")
+
 using DataStructures
 using Printf
 using Plots
 
-function randomPath(filePath::String)
+#different from other as BFS doesn't allow for movement cost
+function randomPathBFS(filePath::String)
     myCells::Matrix{Int64} = fileToMatrixBFS(filePath)
     height, width = size(myCells)
-    while !getPath((rand(1:width), rand(1:height)), (rand(1:width), rand(1:height)), myCells)
+    while !algoBFSAux((rand(1:width), rand(1:height)), (rand(1:width), rand(1:height)), myCells)
     end
 end
 
-function getPath(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})::(Bool, Int, Int)
+function algoBFS(path::String, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
+    algoBFSAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, fileToMatrixBFS(path))
+end
+
+function algoBFSAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})::Bool
+    @printf("--------------------BFS------------------------\n")
     @printf("Finding path from %s to %s\n", start, goal)
 
     if !checkIfPathPossible(start, goal, cells)
@@ -24,21 +31,24 @@ function getPath(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Mat
     came_from[start] = (0, 0) #montre que cest point de depart
     visited = Set{Tuple{Int64, Int64}}() #matrice de faux ?
 
-    added_to_queue_count = 1
-    looked_at_count = 1
+    added_to_queue_count = 0
+    looked_at_count = 0
     while !isempty(toCheck)
+        looked_at_count+=1
         current_pos = dequeue!(toCheck)
         push!(visited, current_pos)
 
         if current_pos == goal
-            showPath(came_from, start, goal, cells)
+            # showPath(came_from, start, goal, cells)
             showPathPlots!(cells, came_from, start, goal)
+            println("Cell looked at: ", looked_at_count)
+            println("Cell added to queue or value changed in queue: ", added_to_queue_count)                        
             return true
         end
 
         for next in getNeighbors(current_pos, cells)
             if !haskey(came_from, next)
-                added_to_queue +=1
+                added_to_queue_count +=1
                 enqueue!(toCheck, next)
                 came_from[next] = current_pos
             end
@@ -46,7 +56,7 @@ function getPath(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Mat
     end
 
     @printf("No path found between %s and %s\n", start, goal)
-    return (false, looked_at_count, added_to_queue_count)
+    return false
 end
 
 
