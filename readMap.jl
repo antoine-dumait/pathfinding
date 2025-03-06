@@ -22,12 +22,12 @@ function fileToMatrixBFS(path::String)::Matrix{Int64}
                 -1
             else
                 @error("Unexpected value in map: $c")
-                -1
+                -1000
             end
-            myMap[y, x] = valu  # ✅ Correction : Inversion des indices
+            myMap[y, x] = valu
         end
     end
-    return myMap  # ✅ La matrice est maintenant correctement orientée
+    return myMap  
 end
 
 # Fonction d'affichage
@@ -36,8 +36,9 @@ function printMap(path::String)
     println(M)
 end
 
+#sand = 5, water = 8
 # Fonction pour convertir un fichier en matrice (Graph)
-function fileToMatrixGraph(path::String, sandValue::Int64)::Matrix{Int64}
+function fileToMatrixGraph(path::String, sandValue::Int64, waterValue::Int64)::Matrix{Int64}
     @printf("Reading map in file '%s'\n", path)
     file = open(path, "r")
     lines = readlines(file)
@@ -60,9 +61,9 @@ function fileToMatrixGraph(path::String, sandValue::Int64)::Matrix{Int64}
                 sandValue
             else
                 @error("Unexpected value in map: $c")
-                -1
+                -1000
             end
-            myMap[y, x] = valu  # ✅ Correction : Inversion des indices
+            myMap[y, x] = valu 
         end
     end
     return myMap
