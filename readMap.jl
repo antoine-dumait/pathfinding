@@ -16,10 +16,14 @@ function fileToMatrixBFS(path::String)::Matrix{Int64}
 
     for (y, line) in enumerate(lines)
         for (x, c) in enumerate(line)
-            valu = if c == '.'
+            valu = if c in ('.', 'G')
                 1
-            elseif c in ('@', 'T')
+            elseif c in ('@', 'O', 'T')
                 -1
+            elseif c == 'S'
+                1
+            elseif c == 'W'
+                1
             else
                 @error("Unexpected value in map: $c")
                 -1000

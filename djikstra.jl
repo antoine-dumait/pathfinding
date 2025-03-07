@@ -12,7 +12,14 @@ function randomPathDjikstra(filePath::String)
     end
 end
 
-function showDistAndPath(distances::Matrix{Int64}, path::Dict{Tuple{Int64,Int64},Tuple{Int64,Int64}}, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
+function showDistAndPath(distances::Matrix{Int64}, path::Dict{Tuple{Int64,Int64},Tuple{Int64,Int64}}, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})
+    path_size = 1
+    prev = goal
+    while haskey(path, prev) && path[prev] != start
+        # @show(path_size)
+        path_size += cells[prev[2], prev[1]]
+        prev = path[prev]
+    end    
     distances2 = map(x-> x != typemax(Int64) ? x : -5, distances)
     prev = goal
     while haskey(path, prev)
@@ -20,24 +27,36 @@ function showDistAndPath(distances::Matrix{Int64}, path::Dict{Tuple{Int64,Int64}
         prev = path[prev]
     end
     p = heatmap(distances2, yaxis=:flip)
+    @printf("Taille du chemin: %d\n", path_size)
+
     display(p)
 end
 
 function algoDjikstra(path::String, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
-    algoDjikstraAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, fileToMatrixGraph(path, 5, 8))
-end
-
-function algoDjikstraAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})
+    # timeStamp = time()
     @printf("--------------------Djikstra------------------------\n")
     @printf("getPath from %s to %s\n", start, goal)
-    inf = typemax(Int64) 
-    height, width = size(cells)
-    
+    cells = fileToMatrixGraph(path, 5, 8)
     if !checkIfPathPossible(start, goal, cells)
         return false
     end
-    
     @printf("Start and Goal walkable, continuing path finding\n")
+    algoDjikstraAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells)
+    # showDistAndPath(distance, came_from, start, goal)
+    # println("Cell looked at: ", looked_at_count)
+    # println("Cell added to queue or value changed in queue: ", added_to_queue_count)                
+
+    # @printf("Temps utilisé: %f\n", time()-timeStamp)
+end
+
+#CheminTrouveBool, Path, LookedAtCount; QueuedCount
+function algoDjikstraAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})
+    # ::(Bool, Dict{Tuple{Int64,Int64},Tuple{Int64,Int64}},Matrix{Int64}, Int64, Int64)
+    timeStamp = time()
+    
+
+    inf = typemax(Int64) 
+    height, width = size(cells)
     
     distance = fill(inf, height, width)
     came_from = Dict{Tuple{Int64,Int64},Tuple{Int64,Int64}}()
@@ -50,13 +69,14 @@ function algoDjikstraAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, ce
     
     looked_at_count = 0
     added_to_queue_count = 0
-
+    
     while !isempty(heap)
         dist, x, y = pop!(heap)
         looked_at_count+=1
         isDone[y, x] = true
         
         if (x,y) == goal
+            @printf("Temps utilisé: %d\n", timeStamp-time())
             break
         end
         
@@ -73,10 +93,10 @@ function algoDjikstraAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, ce
         end
     end
     
-    if distance[goal...] == inf
+    if distance[goal[2],goal[1]] == inf
         return false
     end
-    showDistAndPath(distance, came_from, start, goal)
+    showDistAndPath(distance, came_from, start, goal, cells)
     println("Cell looked at: ", looked_at_count)
     println("Cell added to queue or value changed in queue: ", added_to_queue_count)                
 

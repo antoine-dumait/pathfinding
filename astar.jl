@@ -39,10 +39,14 @@ function showDistAndPath(distances::Matrix{Int64})
 end
 
 function algoAstar(path::String, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
+    # timeStamp = time()    
     algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, fileToMatrixGraph(path, 5, 8))
+    # @printf("Temps utilisé: %f\n", time()-timeStamp)
 end
 
 function algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})#add heurisitc choice
+    timeStamp = time()
+    
     @printf("--------------------A*------------------------\n")
     @printf("Getting path from %s to %s\n", start, goal)
     
@@ -61,7 +65,7 @@ function algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells
     came_from = Dict{Tuple{Int64,Int64},Tuple{Int64,Int64}}()
     
     isDone = falses(height, width)
-        
+    
     queue = PriorityQueue{Tuple{Int64,Int64},Int64}()
     queue[(start[1], start[2])]= 0  # distance, y, x
     
@@ -76,6 +80,7 @@ function algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells
             if cells[ny, nx] != -1 && !isDone[ny, nx]   #verifie si accesible et pas deja fait
                 if (nx, ny) == goal
                     came_from[(nx, ny)] = (x, y)
+                    @printf("Temps utilisé: %d\n", timeStamp-time())
                     showPathPlots!(cells, came_from, start, goal)
                     # showPath(came_from, start, goal, cells)
                     println("Cell looked at: ", looked_at_count)

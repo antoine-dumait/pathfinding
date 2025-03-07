@@ -71,6 +71,13 @@ end
 
 function showPathPlots!(cells::Matrix{Int64}, path::Dict{Tuple{Int64,Int64},Tuple{Int64,Int64}}, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
     println("In showPathPlots!")
+    path_size = 1
+    prev = goal
+    while haskey(path, prev) && path[prev] != start
+        # println("pathsize: ", path_size, " cost: ", cells[prev[2], prev[1]])
+        path_size += cells[prev[2], prev[1]]
+        prev = path[prev]
+    end
 
     for (key, _) in path
         cells[key[2], key[1]] = 2
@@ -94,6 +101,7 @@ function showPathPlots!(cells::Matrix{Int64}, path::Dict{Tuple{Int64,Int64},Tupl
     p = heatmap(cells,c=colors, yaxis=:flip, clim=(minimum(cells), maximum(cells)))
     
     display(p)
+    @printf("Taille du chemin: %d\n", path_size)
     println("Done!")
 end
 
