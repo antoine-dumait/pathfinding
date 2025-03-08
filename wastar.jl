@@ -32,12 +32,6 @@ function heuristicEuclid(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}) #h
     return Int64(floor(sqrt((start[1] - goal[1])^2 + (start[2] - goal[2])^2)))
 end
 
-function showDistAndPath(distances::Matrix{Int64})
-    distances2 = map(x-> x != typemax(Int64) ? x : -1, distances)
-    p = heatmap(distances2, yaxis=:flip)
-    display(p)
-end
-
 function algoAstar(path::String, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
     @printf("--------------------A*------------------------\n")
     @printf("Finding path from %s to %s\n", start, goal)

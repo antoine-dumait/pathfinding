@@ -33,7 +33,7 @@ function getNeighbors(pos::Tuple{Int64,Int64}, cells::Matrix{Int64})
     neighbors::Vector{Tuple{Int64,Int64}} = Vector{Tuple{Int64,Int64}}()
     for (dx,dy) in neighbors_index
         nx, ny = (x+dx, y+dy)
-        if (nx >= 1 && nx <= width && ny >= 1 && ny <= height && cells[ny, nx] != -1)
+        if (cells[ny, nx] != -1 && nx >= 1 && nx <= width && ny >= 1 && ny <= height)
             push!(neighbors, (nx, ny))
         end
     end
@@ -70,12 +70,12 @@ function showPath(path::Dict{Tuple{Int64,Int64},Tuple{Int64,Int64}}, start::Tupl
 end
 
 function showPathPlots!(cells::Matrix{Int64}, path::Dict{Tuple{Int64,Int64},Tuple{Int64,Int64}}, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
-    println("In showPathPlots!")
     path_size = 1
+    cell_count_path = 1 #commence 1 car compte pas la fin donc faut la rajouter
     prev = goal
     while haskey(path, prev) && path[prev] != start
-        # println("pathsize: ", path_size, " cost: ", cells[prev[2], prev[1]])
         path_size += cells[prev[2], prev[1]]
+        cell_count_path += 1
         prev = path[prev]
     end
 
@@ -101,8 +101,7 @@ function showPathPlots!(cells::Matrix{Int64}, path::Dict{Tuple{Int64,Int64},Tupl
     p = heatmap(cells,c=colors, yaxis=:flip, clim=(minimum(cells), maximum(cells)))
     
     display(p)
-    @printf("Taille du chemin: %d\n", path_size)
-    println("Done!")
+    return (cell_count_path, path_size)
 end
 
 
