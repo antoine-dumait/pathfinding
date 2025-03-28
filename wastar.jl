@@ -35,9 +35,10 @@ function algoWAstar(path::String, W::Int, start::Tuple{Int64,Int64}=(0,0), goal:
     end
     @printf("Start and Goal walkable, continuing path finding\n")
     timeStamp = time()
-    cheminTrouveBool, came_from, looked_at_count, added_to_queue_count =  algoWAstarDynamicWeight(start, goal, cells)
+    cheminTrouveBool, came_from, looked_at_count, added_to_queue_count =  algoWAstarAux(W,start, goal, cells)
     doneTime = time()-timeStamp
     caseCount, path_size = showPathPlotsMatrix!(cells, came_from, start, goal)
+    @printf("Weight: %d\n", W)
     @printf("Taille du chemin: %d\n", path_size)
     println("Cell looked at: ", looked_at_count)
     println("Cell added to queue or value changed in queue: ", added_to_queue_count)                
