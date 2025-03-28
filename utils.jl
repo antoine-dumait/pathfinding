@@ -29,11 +29,11 @@ end
 function getNeighbors(pos::Tuple{Int64,Int64}, cells::Matrix{Int64})
     neighbors_index= [(1,0),(0,1),(0,-1),(-1,0)] #haut, droite, bas, gauche
     x,y = pos #Int64
-    width, height = size(cells)
+    height, width = size(cells)
     neighbors::Vector{Tuple{Int64,Int64}} = Vector{Tuple{Int64,Int64}}()
     for (dx,dy) in neighbors_index
         nx, ny = (x+dx, y+dy)
-        if (cells[ny, nx] != -1 && nx >= 1 && nx <= width && ny >= 1 && ny <= height)
+        if (nx >= 1 && nx <= width && ny >= 1 && ny <= height && cells[ny, nx] != -1)
             push!(neighbors, (nx, ny))
         end
     end
@@ -104,7 +104,61 @@ function showPathPlots!(cells::Matrix{Int64}, path::Dict{Tuple{Int64,Int64},Tupl
     return (cell_count_path, path_size)
 end
 
+function showPathPlotsMatrix!(cells::Matrix{Int64}, path_matrix::Array{Union{Nothing,Tuple{Int64,Int64}}, 2}, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
+    path_size = 1
+    cell_count_path = 1 #commence 1 car compte pas la fin donc faut la rajouter
+    height, width = size(cells)
+    checked_cell_color_value = 2
+    path_color_value = 3
+    color_array = Array{Int64, 2}(undef, height, width) 
+    fill!(color_array,1)
+    for x in 1:width, y in 1:height
+        if !isnothing(path_matrix[y,x])          #TODO 26/03 FINIR CA ET VOIR OBSIDIAN POUR RECAP
+            color_array[y,x] = checked_cell_color_value
+        else
+            color_array[y,x] = cells[y,x]
+        end
+    end
 
+    prev = goal
+    while !isnothing(path_matrix[prev[2], prev[1]]) && prev != start
+        path_size += cells[prev[2], prev[1]]
+        cell_count_path += 1        
+        color_array[prev[2], prev[1]] = path_color_value
+        prev = path_matrix[prev[2], prev[1]]
+    end
+
+    # if haskey(path, prev)  
+    #     cells[prev[2], prev[1]] = 3
+    # end
+    start_color_value = -3
+    goal_color_value = -2
+    color_array[start[2], start[1]] = -3
+    color_array[goal[2], goal[1]] = -2        
+
+    colors = cgrad([:white, :blue, :grey23, :burlywood1, :burlywood1, :seagreen4, :red2], [-3, -2, -1,0, 1, 2, 3])
+    p = heatmap(color_array,c=colors, yaxis=:flip)
+
+    display(p)
+    return (cell_count_path, path_size)
+end
+
+function getPathLengthMatrix(cells::Matrix{Int64}, path_matrix::Array{Union{Nothing,Tuple{Int64,Int64}}, 2}, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
+    path_size = 1
+    cell_count_path = 1 #commence 1 car compte pas la fin donc faut la rajouter
+    prev = goal
+    while !isnothing(path_matrix[prev[2], prev[1]]) && prev != start
+        path_size += cells[prev[2], prev[1]]
+        cell_count_path += 1        
+        prev = path_matrix[prev[2], prev[1]]
+    end
+    return (cell_count_path, path_size)
+end
+
+function checkIfPosWalkable(pos::Tuple{Int64,Int64}, cells::Matrix{Int64})
+    height, width = size(cells)
+    return !(pos[1] < 1 || pos[1] > width || pos[2] < 1 || pos[2] > height || cells[pos[2],pos[1]] == -1)
+end
 function checkIfPathPossible(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})
     #check bounds before walkable !
     height, width = size(cells)
@@ -122,4 +176,12 @@ function checkIfPathPossible(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}
         return false
     end
     return true
+end
+
+function heuristicManathan(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
+    return abs(start[1] - goal[1]) + abs(start[2] - goal[2])
+end
+
+function heuristicEuclid(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}) #heurristique eculidienne optimisite car utilise cout de mouvment de 1
+    return Int64(floor(sqrt((start[1] - goal[1])^2 + (start[2] - goal[2])^2)))
 end

@@ -8,8 +8,8 @@ end
 
 #sand = 5, water = 8
 # Fonction pour convertir un fichier en matrice (Graph)
-function fileToMatrixGraph(path::String, sandValue::Int64, waterValue::Int64)::Matrix{Int64}
-    @printf("Reading map in file '%s'\n", path)
+function fileToMatrixGraph(path::String, sandValue::Int64, waterValue::Int64, v=false)::Matrix{Int64}
+    if v @printf("Reading map in file '%s'\n", path) end
     file = open(path, "r")
     lines = readlines(file)
     close(file)
@@ -19,7 +19,7 @@ function fileToMatrixGraph(path::String, sandValue::Int64, waterValue::Int64)::M
     myMap = Matrix{Int64}(undef, height, width)
     lines = lines[5:end]
 
-    @printf("Height: %d, Width: %d\n", height, width)
+    if v @printf("Height: %d, Width: %d\n", height, width) end
 
     for (y, line) in enumerate(lines)
         for (x, c) in enumerate(line)

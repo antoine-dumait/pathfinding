@@ -5,25 +5,6 @@ using DataStructures
 using Printf
 using Plots
 
-#fix neighbor method choise, fix implementation to always return a movemment cost, use with other algorithm
-function randomPathAStar(filePath::String, heuristicNumber::Int=1)
-    # heuristicChoice::Function = ()->false #
-    # neighborsChoice::Function
-    if heuristicNumber == 1
-        heuristicChoice = heuristicManathan
-        neighborsChoice = getNeighbors
-    elseif heuristicNumber == 2
-        heuristicChoice = heuristicEuclid
-        neighborsChoice = getNeighborsDiagonal
-    else
-        @error("Erreur numéro heurisitique invalide") 
-    end
-    myCells::Matrix{Int64} = fileToMatrixGraph(filePath, 5, 8)
-    height, width = size(myCells)
-    while !algoAstarAux((rand(1:width), rand(1:height)), (rand(1:width), rand(1:height)), myCells)
-    end
-end
-
 function heuristicManathan(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
     return abs(start[1] - goal[1]) + abs(start[2] - goal[2])
 end
@@ -32,65 +13,198 @@ function heuristicEuclid(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}) #h
     return Int64(floor(sqrt((start[1] - goal[1])^2 + (start[2] - goal[2])^2)))
 end
 
-function algoAstar(path::String, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
-    @printf("--------------------A*------------------------\n")
-    @printf("Finding path from %s to %s\n", start, goal)
+function showDistAndPath(distances::Matrix{Int64})
+    distances2 = map(x-> x != typemax(Int64) ? x : -1, distances)
+    p = heatmap(distances2, yaxis=:flip)
+    display(p)
+end
+
+function algoWAstar(path::String, W::Int, start::Tuple{Int64,Int64}=(0,0), goal::Tuple{Int64,Int64}=(0,0))
     cells = fileToMatrixGraph(path, 5, 8)
+    height, width = size(cells)
+    while !checkIfPosWalkable(start, cells)
+        start = (rand(1:width), rand(1:height))
+    end
+    while !checkIfPosWalkable(goal, cells)
+        goal = (rand(1:width), rand(1:height))
+    end
+    @printf("--------------------WA*------------------------\n")
+    @printf("Finding path from %s to %s\n", start, goal)
     if !checkIfPathPossible(start, goal, cells)
         return false
     end
     @printf("Start and Goal walkable, continuing path finding\n")
     timeStamp = time()
-    cheminTrouveBool, came_from, looked_at_count, added_to_queue_count =  algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells)
+    cheminTrouveBool, came_from, looked_at_count, added_to_queue_count =  algoWAstarDynamicWeight(start, goal, cells)
     doneTime = time()-timeStamp
-    caseCount, path_size = showPathPlots!(cells, came_from, start, goal)
+    caseCount, path_size = showPathPlotsMatrix!(cells, came_from, start, goal)
     @printf("Taille du chemin: %d\n", path_size)
     println("Cell looked at: ", looked_at_count)
     println("Cell added to queue or value changed in queue: ", added_to_queue_count)                
     @printf("Temps utilisé: %f\n", doneTime)
 end
 
-function algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})#add heurisitc choice    
+function algoWAstarTesting(path::String, W::Int, start::Tuple{Int64,Int64}=(0,0), goal::Tuple{Int64,Int64}=(0,0))
+    cells = fileToMatrixGraph(path, 5, 8)
+    height, width = size(cells)
+    while !checkIfPosWalkable(start, cells)
+        start = (rand(1:width), rand(1:height))
+    end
+    while !checkIfPosWalkable(goal, cells)
+        goal = (rand(1:width), rand(1:height))
+    end
+    if !checkIfPathPossible(start, goal, cells)
+        return (false, 0, 0, 0, 0)
+    end
+    timeStamp = time()
+    cheminTrouveBool, came_from, looked_at_count, added_to_queue_count =  algoWAstarAux(W, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells)
+    doneTime = time()-timeStamp
+    caseCount, path_size = getPathLengthMatrix(cells, came_from, start, goal)
+    return (cheminTrouveBool, path_size, caseCount, looked_at_count, added_to_queue_count, doneTime)
+end
+
+
+#augmente la valeur de W jusqu'a ce que celle-ci ne diminue plus le nombres de cases évalués
+function algoWAstarDichoWeight(path::String, start::Tuple{Int64,Int64}=(0,0), goal::Tuple{Int64,Int64}=(0,0))
+    cells = fileToMatrixGraph(path, 5, 8)
+    height, width = size(cells)
+    while !checkIfPosWalkable(start, cells)
+        start = (rand(1:width), rand(1:height))
+    end
+    while !checkIfPosWalkable(goal, cells)
+        goal = (rand(1:width), rand(1:height))
+    end
+    if !checkIfPathPossible(start, goal, cells)
+        return (false, 0, 0, 0, 0)
+    end
+
+    results = []
+    alpha = 0.5
+    fCalcW = x->exp(x*alpha)
+    x=0
+    maxX = 10
+    W = 1
+    last_count = Core.typemax_Int       
+    no_improvement_count = 0
+    max_no_improve = 3 #arrete de calculer de nouveau W si 3 fois de suite celui ci ne sameliore pas
+    while no_improvement_count < max_no_improve || x < maxX
+        timeStamp = time()
+        cheminTrouveBool, came_from, looked_at_count, added_to_queue_count =  algoWAstarAux(W, start, goal, cells)
+        doneTime = time()-timeStamp
+        caseCount, path_size = getPathLengthMatrix(cells, came_from, start, goal)
+        push!(results , (cheminTrouveBool, path_size, caseCount, looked_at_count, added_to_queue_count, doneTime, W))
+        if last_count <= looked_at_count
+            no_improvement_count +=1
+        else
+            last_count = looked_at_count
+        end
+        x+=1 
+        W = round(Int,fCalcW(x))
+
+    end
+    return results
+end
+
+
+function algoWAstarAux(W::Int, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})#add heurisitc choice    
     inf = typemax(Int64) 
     height, width = size(cells)
     
     distance = fill(inf, height, width) 
     distance[start[2], start[1]] = 0
     
-    came_from = Dict{Tuple{Int64,Int64},Tuple{Int64,Int64}}()
-    
+    came_from = Array{Union{Nothing,Tuple{Int64,Int64}}, 2}(nothing, height, width) #array more memory but faster
+
     isDone = falses(height, width)
     
-    queue = PriorityQueue{Tuple{Int64,Int64},Int64}()
-    queue[(start[1], start[2])]= 0  # distance, y, x
-    
+    queue = BinaryMinHeap{Tuple{Int64,Int64,Int64}}() #BinaryMinHeap faster than PriorityQueue but more memory
+    push!(queue, (0, start[1], start[2]))
     
     looked_at_count = 0
     added_to_queue_count = 0
     goalFound = false
+
     while !isempty(queue)
         looked_at_count+=1
-        x, y = dequeue!(queue)
+        _, x, y = pop!(queue)
         isDone[y, x] = true
         if (x, y) == goal #voir si plus opti dans le mettre direct dans la boucle voisin
             goalFound =  true
             break
         end
         for (nx, ny) in getNeighbors((x, y), cells)
-            if cells[ny, nx] != -1 && !isDone[ny, nx]   #verifie si accesible et pas deja fait
+            if !isDone[ny, nx] && cells[ny, nx] != -1   #verifie si accesible et pas deja fait
                 new_dist = distance[y, x] + cells[ny, nx]
                 if new_dist < distance[ny, nx]
                     added_to_queue_count+=1
                     distance[ny, nx] = new_dist
-                    queue[(nx,ny)] = new_dist + heuristicManathan((nx,ny), goal)
-                    came_from[(nx, ny)] = (x, y)
+                    push!(queue, (new_dist + W*heuristicManathan((nx,ny), goal), nx, ny))
+                    came_from[ny, nx] = (x, y)
                 end
             end
         end
     end
+    # goalFound = isDone[goal[2],goal[1]] == true
     if goalFound
         return (true, came_from, looked_at_count, added_to_queue_count)
     else
-        return (false, Dict(), looked_at_count, added_to_queue_count)
+        return (false, came_from, looked_at_count, added_to_queue_count)
     end 
+end
+
+function algoWAstarDynamicWeight(start::Tuple{Int,Int}, goal::Tuple{Int,Int}, cells::Matrix{Int64})
+    inf = typemax(Int64)
+    height, width = size(cells)
+
+    distance = fill(inf, height, width)
+    distance[start[2], start[1]] = 0
+
+    came_from = Array{Union{Nothing, Tuple{Int,Int}}, 2}(nothing, height, width)
+
+    isDone = falses(height, width)
+    queue = BinaryMinHeap{Tuple{Float64, Int, Int}}()  # poids dynamique en float
+
+    push!(queue, (0.0, start[1], start[2]))
+
+    looked_at_count = 0
+    added_to_queue_count = 0
+    goalFound = false
+
+    max_manhattan = heuristicManathan(start, goal) + 1e-6  # éviter division par zéro
+
+    while !isempty(queue)
+        looked_at_count += 1
+        _, x, y = pop!(queue)
+        isDone[y, x] = true
+
+        if (x, y) == goal
+            goalFound = true
+            break
+        end
+
+        for (nx, ny) in getNeighbors((x, y), cells)
+            if !isDone[ny, nx] && cells[ny, nx] != -1
+                new_dist = distance[y, x] + cells[ny, nx]
+
+                if new_dist < distance[ny, nx]
+                    added_to_queue_count += 1
+                    distance[ny, nx] = new_dist
+
+                    
+                    manh = heuristicManathan((nx, ny), goal)
+                    dynamic_W = manh / max_manhattan  #W calculé en fonction de la distance à l'arrivée
+                    priority = new_dist + dynamic_W * manh 
+                    push!(queue, (priority, nx, ny))
+
+                    came_from[ny, nx] = (x, y)
+                end
+            end
+        end
+    end
+
+    if goalFound
+        return (true, came_from, looked_at_count, added_to_queue_count)
+    else
+        return (false, came_from, looked_at_count, added_to_queue_count)
+    end
 end

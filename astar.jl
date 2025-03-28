@@ -38,10 +38,17 @@ function showDistAndPath(distances::Matrix{Int64})
     display(p)
 end
 
-function algoAstar(path::String, start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64})
+function algoAstar(path::String, start::Tuple{Int64,Int64}=(0,0), goal::Tuple{Int64,Int64}=(0,0))
+    cells = fileToMatrixGraph(path, 5, 8)
+    height, width = size(cells)
+    while !checkIfPosWalkable(start, cells)
+        start = (rand(1:width), rand(1:height))
+    end
+    while !checkIfPosWalkable(goal, cells)
+        goal = (rand(1:width), rand(1:height))
+    end
     @printf("--------------------A*------------------------\n")
     @printf("Finding path from %s to %s\n", start, goal)
-    cells = fileToMatrixGraph(path, 5, 8)
     if !checkIfPathPossible(start, goal, cells)
         return false
     end
@@ -49,7 +56,32 @@ function algoAstar(path::String, start::Tuple{Int64,Int64}, goal::Tuple{Int64,In
     timeStamp = time()
     cheminTrouveBool, came_from, looked_at_count, added_to_queue_count =  algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells)
     doneTime = time()-timeStamp
-    caseCount, path_size = showPathPlots!(cells, came_from, start, goal)
+    caseCount, path_size = showPathPlotsMatrix!(cells, came_from, start, goal)
+    @printf("Taille du chemin: %d\n", path_size)
+    println("Cell looked at: ", looked_at_count)
+    println("Cell added to queue or value changed in queue: ", added_to_queue_count)                
+    @printf("Temps utilisé: %f\n", doneTime)
+end
+
+function algoAstarTesting(path::String, start::Tuple{Int64,Int64}=(0,0), goal::Tuple{Int64,Int64}=(0,0))
+    cells = fileToMatrixGraph(path, 5, 8)
+    height, width = size(cells)
+    while !checkIfPosWalkable(start, cells)
+        start = (rand(1:width), rand(1:height))
+    end
+    while !checkIfPosWalkable(goal, cells)
+        goal = (rand(1:width), rand(1:height))
+    end
+    @printf("--------------------A*------------------------\n")
+    @printf("Finding path from %s to %s\n", start, goal)
+    if !checkIfPathPossible(start, goal, cells)
+        return false
+    end
+    @printf("Start and Goal walkable, continuing path finding\n")
+    timeStamp = time()
+    cheminTrouveBool, came_from, looked_at_count, added_to_queue_count =  algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells)
+    doneTime = time()-timeStamp
+    caseCount, path_size = getPathLengthMatrix(cells, came_from, start, goal)
     @printf("Taille du chemin: %d\n", path_size)
     println("Cell looked at: ", looked_at_count)
     println("Cell added to queue or value changed in queue: ", added_to_queue_count)                
@@ -63,33 +95,33 @@ function algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells
     distance = fill(inf, height, width) 
     distance[start[2], start[1]] = 0
     
-    came_from = Dict{Tuple{Int64,Int64},Tuple{Int64,Int64}}()
-    
+    came_from = Array{Union{Nothing,Tuple{Int64,Int64}}, 2}(nothing, height, width) #array more memory but faster
+
     isDone = falses(height, width)
     
-    queue = PriorityQueue{Tuple{Int64,Int64},Int64}()
-    queue[(start[1], start[2])]= 0  # distance, y, x
-    
+    queue = BinaryMinHeap{Tuple{Int64,Int64,Int64}}() #BinaryMinHeap faster than PriorityQueue but more memory
+    push!(queue, (0, start[1], start[2]))
     
     looked_at_count = 0
     added_to_queue_count = 0
     goalFound = false
+
     while !isempty(queue)
         looked_at_count+=1
-        x, y = dequeue!(queue)
+        _, x, y = pop!(queue)
         isDone[y, x] = true
         if (x, y) == goal #voir si plus opti dans le mettre direct dans la boucle voisin
             goalFound =  true
             break
         end
         for (nx, ny) in getNeighbors((x, y), cells)
-            if cells[ny, nx] != -1 && !isDone[ny, nx]   #verifie si accesible et pas deja fait
+            if !isDone[ny, nx] && cells[ny, nx] != -1   #verifie si accesible et pas deja fait
                 new_dist = distance[y, x] + cells[ny, nx]
                 if new_dist < distance[ny, nx]
                     added_to_queue_count+=1
                     distance[ny, nx] = new_dist
-                    queue[(nx,ny)] = new_dist + heuristicManathan((nx,ny), goal)
-                    came_from[(nx, ny)] = (x, y)
+                    push!(queue, (new_dist + heuristicManathan((nx,ny), goal), nx, ny))
+                    came_from[ny, nx] = (x, y)
                 end
             end
         end
@@ -97,6 +129,49 @@ function algoAstarAux(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells
     if goalFound
         return (true, came_from, looked_at_count, added_to_queue_count)
     else
-        return (false, Dict(), looked_at_count, added_to_queue_count)
+        return (false, came_from, looked_at_count, added_to_queue_count)
     end 
+end
+
+function algoAstarAux2(start::Tuple{Int64,Int64}, goal::Tuple{Int64,Int64}, cells::Matrix{Int64})#add heurisitc choice    
+    inf = typemax(Int64) 
+    height, width = size(cells)
+    
+    distance = fill(inf, height, width) 
+    distance[start[2], start[1]] = 0
+    
+    came_from = Array{Tuple{Int64,Int64}, 2}(undef, height, width) #array more memory but faster
+    
+    isDone = falses(height, width)
+    
+    queue = BinaryMinHeap{Tuple{Int64,Int64,Int64}}() #BinaryMinHeap faster than PriorityQueue but more memory
+    # queue[(start[1], start[2])]= 0  # distance, y, x
+    push!(queue, (0, start[1], start[2]))
+    
+    
+    looked_at_count = 0
+    added_to_queue_count = 0
+    goalFound = false
+    while !isempty(queue)
+        looked_at_count+=1
+        _, x, y = pop!(queue)
+        # x, y = dequeue!(queue)
+        isDone[y, x] = true
+        for (nx, ny) in getNeighbors((x, y), cells)
+            if !isDone[ny, nx] && cells[ny, nx] != -1   #verifie si accesible et pas deja fait
+                new_dist = distance[y, x] + cells[ny, nx]
+                if new_dist < distance[ny, nx]
+                    added_to_queue_count+=1
+                    distance[ny, nx] = new_dist
+                    came_from[ny, nx] = (x, y)
+                    if (nx, ny) == goal #voir si plus opti dans le mettre direct dans la boucle voisin
+                        return (true, came_from, looked_at_count, added_to_queue_count)                    
+                    end
+                    push!(queue, (new_dist + heuristicManathan((nx,ny), goal), nx, ny))
+                    # queue[(nx,ny)] = new_dist + heuristicManathan((nx,ny), goal)
+                end
+            end
+        end
+    end
+    return (false, Array{Tuple{Int,Int}}(), looked_at_count, added_to_queue_count)
 end
